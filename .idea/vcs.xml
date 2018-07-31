@@ -2,5 +2,10 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/ccm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/cpp-driver" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/gtest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/killrvideo-sample-schema" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/libuv" vcs="Git" />
   </component>
 </project>

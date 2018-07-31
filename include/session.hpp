@@ -55,7 +55,9 @@ public:
     }
     ~Session() = default;
 
-    bool isConnected() const;
+    bool isConnected() const {
+        return state_ == SessionState::OPEN;
+    }
 
     SessionState connect() { return connect(""); }
     SessionState connect(std::string const& keyspace);
@@ -69,7 +71,7 @@ public:
 
     const CassSchemaMeta* getSchemaMeta();
 
-    Error & getLastSessionError() const;
+    Error const& getLastSessionError() const;
     void setLastSessionError(Error && e) {
         last_error_ = std::move(e);
     }

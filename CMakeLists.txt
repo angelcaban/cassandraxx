@@ -13,6 +13,8 @@ find_package(Boost REQUIRED
                date_time
                filesystem
                system)
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
 
 # set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,6 +22,7 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 set(THIRD_PARTY_INSTALL "${PROJECT_SOURCE_DIR}/third_party/install"
     CACHE PATH "third-party install directory")
 
+enable_testing()
 include_directories(
     "${PROJECT_SOURCE_DIR}/include"
     "${PROJECT_SOURCE_DIR}/third_party/install/include"
@@ -45,7 +48,26 @@ externalproject_add(cpp-driver
                     DEPENDS libuv
                     INSTALL_DIR "${THIRD_PARTY_INSTALL}"
                     CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_INSTALL}")
+externalproject_add(gtest-lib
+                    SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/gtest"
+                    GIT_REPOSITORY "https://github.com/google/googletest.git"
+                    INSTALL_DIR "${THIRD_PARTY_INSTALL}"
+                    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_INSTALL}")
+externalproject_add(ccm-cli
+                    SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/ccm"
+                    GIT_REPOSITORY "https://github.com/riptano/ccm.git"
+                    CONFIGURE_COMMAND cd ${PROJECT_SOURCE_DIR}/third_party/ccm;
+                                      ./setup.py build
+                    BUILD_COMMAND     cd ${PROJECT_SOURCE_DIR}/third_party/ccm;
+                                      ./setup.py build
+                    INSTALL_COMMAND   cd ${PROJECT_SOURCE_DIR}/third_party/ccm;
+                                      ./setup.py install)
 
 add_library(CassandraCxx SHARED ${srcs} ${hdrs})
-add_dependencies(CassandraCxx cpp-driver libuv)
+add_dependencies(CassandraCxx cpp-driver libuv ccm-cli)
 target_link_libraries(CassandraCxx cassandra)
+
+file(GLOB libraries ${THIRD_PARTY_INSTALL}/lib/*)
+file(COPY ${libraries} DESTINATION ${PROJECT_BINARY_DIR})
+
+add_subdirectory(test)

@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <variant>
 
 #include <cassandra.h>
 
@@ -18,15 +19,26 @@ struct CassErrorDeleter {
     }
 };
 
+using CassErrorResultPtr = std::unique_ptr<CassErrorResult, CassErrorDeleter>;
+using ErrorVariant = std::variant<CassErrorResultPtr, CassError>;
+
 class Error {
 private:
-    std::unique_ptr<CassErrorResult, CassErrorDeleter> error_;
-    CassErrorResult const* mem() const { return error_.get(); }
+    ErrorVariant error_;
+    std::string err_msg_;
+    CassErrorResult const* mem() const {
+        const auto pval = std::get_if<CassErrorResultPtr>(&error_);
+        return (pval == nullptr) ? nullptr : pval->get();
+    }
 
 public:
     Error() = default;
-    Error(CassErrorResult const* err) {
-        error_.reset(const_cast<CassErrorResult*>(err));
+    Error(CassErrorResult const* err)
+        : error_{std::in_place_type_t<CassErrorResultPtr>{},
+                 const_cast<CassErrorResult*>(err)} {
+    }
+    Error(CassError err)
+        : error_{std::in_place_type_t<CassError>{}, err} {
     }
     Error(Error const &o) = delete;
     Error(Error &&o) : error_(std::move(o.error_)) {
@@ -37,8 +49,19 @@ public:
     }
     ~Error() = default;
 
-    void reset(CassErrorResult *future = nullptr) {
-        error_.reset(future);
+    void setErrorMessage(std::string msg) {
+        err_msg_ = msg;
+    }
+    std::string const& errorMessage() const {
+        return err_msg_;
+    }
+
+    void resetResultError(CassErrorResult *future = nullptr) {
+        error_ = ErrorVariant{std::in_place_type_t<CassErrorResultPtr>{},
+                              future};
+    }
+    bool isResultErrorSet() const {
+        return mem() != nullptr;
     }
 
     CassError getErrorCode() const;

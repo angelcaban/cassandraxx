@@ -23,6 +23,12 @@ const CassResult* Future::getResult() {
 }
 
 Error Future::getError() {
+    auto const* result_err = cass_future_get_error_result(mem());
+    if (result_err == nullptr) {
+        Error err{getErrorCode()};
+        err.setErrorMessage(getErrorMessage());
+        return std::move(err);
+    }
     return std::move(Error{cass_future_get_error_result(mem())});
 }
 
@@ -38,7 +44,6 @@ std::string Future::getErrorMessage() {
     const char* msg_out;
     size_t msg_len;
     cass_future_error_message(mem(), &msg_out, &msg_len);
-
     return (std::move(std::string{msg_out, msg_len}));
 }
 

@@ -59,7 +59,7 @@ const CassSchemaMeta* Session::getSchemaMeta() {
     return cass_session_get_schema_meta(mem());
 }
 
-Error& Session::getLastSessionError() const {
+Error const& Session::getLastSessionError() const {
     return last_error_;
 }
 

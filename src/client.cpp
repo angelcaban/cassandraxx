@@ -5,6 +5,7 @@
 #include <thread>
 #include <string>
 
+#include "futureError.hpp"
 #include "client.hpp"
 
 using std::string;
@@ -16,20 +17,24 @@ Client::Client(LogCallback & cp)
         : session_(&cluster_), logger_(cp) {
 }
 
-void Client::storeCredentails(string const &un,
+Client::~Client() {
+    if (session_.isConnected()) {
+        Future future = session_.close();
+        if (CASS_OK != future.getErrorCode()) {
+            logger_(future.getErrorMessage());
+        }
+    }
+}
+
+void Client::storeCredentials(string const &un,
                               string const &pw) {
     cluster_.setCredentials(un, pw);
 }
 
-template <class ITER>
-void Client::connectSession(ITER begin, ITER end) {
-    string cps;
-    while (begin != (end - 1)) {
-        cps += *begin++;
-        cps += ",";
-    }
-
+void Client::connectSession_priv(string & cps) {
     cluster_.setContactPoints(cps);
+    bool keep_retrying = (connect_retry_count_ != -1);
+    int retry_count = 0;
 
     SessionState state = SessionState::CLOSED;
     while (state != SessionState::OPEN) {
@@ -37,10 +42,16 @@ void Client::connectSession(ITER begin, ITER end) {
         if (state == SessionState::CLOSED) {
             logger_(session_.getLastSessionError());
         }
+        if (keep_retrying) {
+            ++retry_count;
+            keep_retrying = retry_count < connect_retry_count_;
+        } else {
+            break;
+        }
         logger_("Retrying Connection to [" + cps + "]");
 
         std::this_thread::sleep_for(milliseconds{1000});
-    }
+    } // while connection !open
 }
 
 
